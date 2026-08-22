@@ -19,21 +19,37 @@
   <!-- LOGIN -->
   <div id="screen-login" class="screen active">
     <div class="login-wrap">
-      <div class="card login-card">
-        <div class="login-logo">
-          <span class="logo-icon">🃏</span>
-          <h1>Estimativa Ágil</h1>
+      <div class="login-split">
+
+        <div class="login-stage">
+          <div class="login-brand">
+            <span class="mark">🃏 Estimativa Ágil</span>
+            <h1>Estimativa colaborativa para Devs e QA</h1>
+            <p class="hype">Cartas Fibonacci, horas de QA e isolamento por squad — tudo numa sala só.</p>
+          </div>
+          <div class="card-fan" aria-hidden="true">
+            <div class="fan-card">1</div>
+            <div class="fan-card">3</div>
+            <div class="fan-card">5</div>
+            <div class="fan-card">8</div>
+            <div class="fan-card">?</div>
+          </div>
+          <div class="login-isolation" id="login-isolation">
+            <span class="foot">cada squad vê só os próprios dados</span>
+          </div>
         </div>
-        <p class="subtitle">Estimativa colaborativa para Devs e QA</p>
+
+        <div class="login-form-panel">
+      <div class="card login-card">
+        <p class="login-eyebrow">Entrar na sala</p>
+        <h2>Quem está votando?</h2>
         <div class="form-group">
           <label for="input-name">Seu nome</label>
           <input id="input-name" type="text" placeholder="Digite seu nome" maxlength="30" autocomplete="name" />
         </div>
         <div class="form-group" id="squad-group" style="display:none">
-          <label for="squad-select">Squad</label>
-          <select id="squad-select" class="form-select">
-            <option value="">— Selecione seu squad —</option>
-          </select>
+          <label>Squad</label>
+          <div id="squad-picker" class="squad-picker" role="group" aria-label="Squad"></div>
         </div>
         <div class="form-group">
           <label>Avatar</label>
@@ -66,6 +82,23 @@
         </div>
         <button id="btn-join" class="btn-primary">Entrar na sessão</button>
         <p id="login-error" class="error hidden" role="alert" aria-live="assertive"></p>
+      </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- SM PENDING APPROVAL -->
+  <div id="screen-sm-pending" class="screen">
+    <div class="login-wrap">
+      <div class="card login-card">
+        <div class="login-logo">
+          <span class="logo-icon">⏳</span>
+          <h1>Aguardando aprovação</h1>
+        </div>
+        <p class="subtitle" id="sm-pending-text">Seu pedido de acesso como Scrum Master foi enviado. Assim que o Scrum Master desta sala aprovar, você entra automaticamente.</p>
+        <button id="btn-cancel-sm-pending" class="btn-outline" style="width:100%">Cancelar</button>
       </div>
     </div>
   </div>
@@ -370,13 +403,13 @@
         <!-- TAB: Squads -->
         <div id="tab-squads" class="tab-content">
           <div id="squad-scope-box" class="squad-scope-box hidden">
-            <label for="squad-scope-select">🔒 Você está atuando no squad</label>
-            <select id="squad-scope-select" class="form-select">
-              <option value="">Todos os squads (visão da sala)</option>
-            </select>
-            <p class="squad-scope-hint">Define o que você vê em participantes, votos, resultado e histórico — e qual baralho de cartas você edita.</p>
+            <span class="reach-badge local">👁 Só muda o que você vê</span>
+            <label>🔒 Você está atuando no squad</label>
+            <div id="squad-scope-picker" class="squad-picker" role="group" aria-label="Escopo do Scrum Master"></div>
+            <p class="squad-scope-hint">Define o que você vê em participantes, votos, resultado e histórico — e qual baralho de cartas você edita. Ninguém mais é afetado ao trocar isso aqui.</p>
           </div>
-          <p class="modal-hint">Registre os squads. Os colaboradores poderão selecionar o seu squad ao entrar.</p>
+          <span class="reach-badge sync">🌐 Adicionar/remover squad vai para todo mundo</span>
+          <p class="modal-hint" style="margin-top:.6rem">Registre os squads. Os colaboradores poderão selecionar o seu squad ao entrar.</p>
           <div id="squads-list" class="squads-list"></div>
           <div class="add-squad-form">
             <input id="new-squad-name" type="text" placeholder="Nome do squad (ex: Squad Alpha)" maxlength="40" />
@@ -406,6 +439,19 @@
               <input id="sm-link-input" type="text" readonly />
               <button id="btn-copy-sm-link" class="btn-copy-sm">📋 Copiar</button>
             </div>
+          </div>
+
+          <!-- Pending SM access requests -->
+          <div class="access-card">
+            <div class="access-card-header">
+              <span class="access-icon">📥</span>
+              <div>
+                <strong>Pedidos de acesso a Scrum Master</strong>
+                <p>Quem abrir o link de SM acima pede acesso — você aprova ou recusa antes da pessoa entrar como Scrum Master desta sala.</p>
+              </div>
+            </div>
+            <div id="pending-sm-list"></div>
+            <p id="pending-sm-empty" class="modal-hint" style="margin:0">Nenhum pedido no momento.</p>
           </div>
 
           <!-- Participant Link -->
