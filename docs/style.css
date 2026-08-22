@@ -44,6 +44,42 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .login-card h1 { font-size: 1.9rem; font-weight: 800; color: var(--red); }
 .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: .9rem; }
 
+/* ── Capa da tela de login: painel de identidade + formulário ─────────────── */
+.login-split { width: 100%; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-md); }
+
+/* Painel esquerdo: fixo escuro de propósito — é uma peça de identidade, não
+   uma superfície de leitura, então não segue o tema claro/escuro do resto. */
+.login-stage { position: relative; overflow: hidden; background: #150f24; display: flex; flex-direction: column; justify-content: space-between; padding: 2.5rem 2.25rem; min-height: 22rem; text-align: left; }
+.login-stage::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 20% 15%, rgba(204,9,47,.35), transparent 55%), radial-gradient(ellipse at 85% 80%, rgba(124,58,237,.3), transparent 50%); }
+.login-brand { position: relative; z-index: 1; }
+.login-brand .mark { display: inline-flex; align-items: center; gap: .5rem; font-weight: 800; font-size: .74rem; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,.6); margin-bottom: 1.4rem; }
+.login-brand h1 { font-size: clamp(1.5rem, 3.4vw, 1.9rem); font-weight: 800; color: #fff; line-height: 1.25; margin-bottom: .65rem; max-width: 18ch; }
+.login-brand .hype { color: rgba(255,255,255,.68); font-size: .88rem; line-height: 1.5; max-width: 30ch; }
+
+.card-fan { position: relative; z-index: 1; height: 7rem; margin: 1.5rem 0; }
+.fan-card { position: absolute; top: 0; width: 3.8rem; height: 5.4rem; border-radius: 9px; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.16); display: flex; align-items: center; justify-content: center; font: 700 1.3rem/1 var(--mono, monospace); color: rgba(255,255,255,.85); }
+.fan-card:nth-child(1) { left: 0;      transform: rotate(-14deg);                background: rgba(124,58,237,.16); border-color: rgba(196,181,253,.3); }
+.fan-card:nth-child(2) { left: 2.9rem; transform: rotate(-6deg) translateY(-.35rem); background: rgba(232,23,61,.14); border-color: rgba(252,165,165,.3); }
+.fan-card:nth-child(3) { left: 5.8rem; transform: rotate(2deg) translateY(-.6rem);  background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.28); z-index: 2; }
+.fan-card:nth-child(4) { left: 8.7rem; transform: rotate(10deg) translateY(-.25rem); background: rgba(13,148,136,.16); border-color: rgba(94,234,212,.3); }
+.fan-card:nth-child(5) { left: 11.6rem;transform: rotate(18deg);                background: rgba(3,105,161,.16); border-color: rgba(125,211,252,.3); }
+
+.login-isolation { position: relative; z-index: 1; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.login-isolation .iso-chip { display: flex; align-items: center; gap: .35rem; font-size: .72rem; font-weight: 700; color: rgba(255,255,255,.85); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); padding: .35rem .65rem .35rem .5rem; border-radius: 999px; }
+.login-isolation .sw { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: #c4b5fd; }
+.login-isolation .foot { color: rgba(255,255,255,.42); font-size: .7rem; }
+
+.login-form-panel { background: var(--surface); display: flex; align-items: center; justify-content: center; padding: 2.5rem 2rem; }
+.login-form-panel .login-card { background: none; border: none; box-shadow: none; padding: 0; }
+.login-eyebrow { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--red); margin-bottom: .5rem; }
+.login-card h2 { font-size: 1.1rem; font-weight: 800; margin-bottom: 1.4rem; color: var(--text); }
+
+@media (max-width: 780px) {
+  .login-split { grid-template-columns: 1fr; max-width: 460px; }
+  .login-stage { min-height: 0; padding: 1.75rem 1.5rem; }
+  .card-fan { display: none; }
+}
+
 /* ── Forms ───────────────────────────────────────────────────────────────── */
 .form-group { text-align: left; margin-bottom: 1.25rem; }
 .form-group label { display: block; font-size: .75rem; font-weight: 700; color: var(--muted); margin-bottom: .45rem; text-transform: uppercase; letter-spacing: .05em; }

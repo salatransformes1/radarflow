@@ -1370,6 +1370,19 @@ function updateSquadSelector() {
     }
     picker.innerHTML = squads.map((sq) => `<button type="button" class="squad-btn" data-squad="${escHtml(sq)}" aria-pressed="${sq === selectedLoginSquad}">${escHtml(sq)}</button>`).join('');
   } else { group.style.display = 'none'; selectedLoginSquad = ''; }
+  renderLoginIsolationChips(squads);
+}
+
+// Legenda decorativa da capa de login — mostra os squads da sala (se houver)
+// para reforçar visualmente que cada um vê só os próprios dados.
+function renderLoginIsolationChips(squads) {
+  const el = document.getElementById('login-isolation');
+  if (!el) return;
+  const dotColors = ['#c4b5fd', '#7dd3fc', '#5eead4', '#fca5a5', '#fde68a'];
+  const chips = (squads || []).slice(0, 4).map((sq, i) =>
+    `<span class="iso-chip"><span class="sw" style="background:${dotColors[i % dotColors.length]}"></span>${escHtml(sq)}</span>`
+  ).join('');
+  el.innerHTML = chips + '<span class="foot">cada squad vê só os próprios dados</span>';
 }
 
 // ─── Round timer ──────────────────────────────────────────────────────────────

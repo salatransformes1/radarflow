@@ -19,12 +19,30 @@
   <!-- LOGIN -->
   <div id="screen-login" class="screen active">
     <div class="login-wrap">
-      <div class="card login-card">
-        <div class="login-logo">
-          <span class="logo-icon">🃏</span>
-          <h1>Estimativa Ágil</h1>
+      <div class="login-split">
+
+        <div class="login-stage">
+          <div class="login-brand">
+            <span class="mark">🃏 Estimativa Ágil</span>
+            <h1>Estimativa colaborativa para Devs e QA</h1>
+            <p class="hype">Cartas Fibonacci, horas de QA e isolamento por squad — tudo numa sala só.</p>
+          </div>
+          <div class="card-fan" aria-hidden="true">
+            <div class="fan-card">1</div>
+            <div class="fan-card">3</div>
+            <div class="fan-card">5</div>
+            <div class="fan-card">8</div>
+            <div class="fan-card">?</div>
+          </div>
+          <div class="login-isolation" id="login-isolation">
+            <span class="foot">cada squad vê só os próprios dados</span>
+          </div>
         </div>
-        <p class="subtitle">Estimativa colaborativa para Devs e QA</p>
+
+        <div class="login-form-panel">
+      <div class="card login-card">
+        <p class="login-eyebrow">Entrar na sala</p>
+        <h2>Quem está votando?</h2>
         <div class="form-group">
           <label for="input-name">Seu nome</label>
           <input id="input-name" type="text" placeholder="Digite seu nome" maxlength="30" autocomplete="name" />
@@ -64,6 +82,9 @@
         </div>
         <button id="btn-join" class="btn-primary">Entrar na sessão</button>
         <p id="login-error" class="error hidden" role="alert" aria-live="assertive"></p>
+      </div>
+        </div>
+
       </div>
     </div>
   </div>
