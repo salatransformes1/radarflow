@@ -261,6 +261,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .modal-close:hover { background: var(--surface2); color: var(--text); }
 .modal-body { padding: 1.1rem 1.5rem; overflow-y: auto; flex: 1; }
 .modal-hint { color: var(--muted); font-size: .82rem; margin-bottom: 1rem; }
+
+.cards-scope-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
+.deck-badge { font-size: .72rem; font-weight: 600; padding: .2rem .65rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); }
+.deck-badge.badge-own { color: #fff; background: var(--red); border-color: var(--red); }
+.btn-revert-deck { padding: .3rem .7rem; background: none; border: 1.5px solid var(--border); border-radius: 6px; font-size: .78rem; font-weight: 600; cursor: pointer; color: var(--muted); white-space: nowrap; }
+.btn-revert-deck:hover { border-color: var(--red); color: var(--red); }
 .modal-footer { padding: .875rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: .6rem; justify-content: flex-end; }
 .modal-footer .btn-primary { width: auto; margin-top: 0; padding: .65rem 1.5rem; }
 
