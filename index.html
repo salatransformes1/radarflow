@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estimativa Ágil</title>
+  <link rel="stylesheet" href="docs/style.css" />
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="screen-login" class="screen active">
+    <div class="login-wrap">
+      <div class="card login-card">
+        <div class="login-logo">
+          <span class="logo-icon">🃏</span>
+          <h1>Estimativa Ágil</h1>
+        </div>
+        <p class="subtitle">Estimativa colaborativa para Devs e QA</p>
+        <div class="form-group">
+          <label>Seu nome</label>
+          <input id="input-name" type="text" placeholder="Digite seu nome" maxlength="30" />
+        </div>
+        <div class="form-group" id="squad-group" style="display:none">
+          <label>Squad</label>
+          <select id="squad-select" class="form-select">
+            <option value="">— Selecione seu squad —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Avatar</label>
+          <div id="avatar-picker" class="avatar-picker"></div>
+        </div>
+        <div class="form-group">
+          <label>Papel</label>
+          <div class="role-selector">
+            <button class="role-btn active" data-role="developer">
+              <span class="role-icon">💻</span>
+              <div><span class="role-label">Desenvolvedor</span><span class="role-desc">Vota com pontos Fibonacci</span></div>
+            </button>
+            <button class="role-btn" data-role="qa">
+              <span class="role-icon">🔍</span>
+              <div><span class="role-label">QA</span><span class="role-desc">Informa estimativa em horas</span></div>
+            </button>
+            <button class="role-btn" data-role="observer">
+              <span class="role-icon">👀</span>
+              <div><span class="role-label">Observador</span><span class="role-desc">Acompanha sem votar</span></div>
+            </button>
+            <button class="role-btn" data-role="tech-lead">
+              <span class="role-icon">⚡</span>
+              <div><span class="role-label">Tech Lead</span><span class="role-desc">Vota e visualiza resultados completos</span></div>
+            </button>
+            <button class="role-btn role-sm hidden" data-role="master">
+              <span class="role-icon">👑</span>
+              <div><span class="role-label">Scrum Master</span><span class="role-desc">Visão geral e controle da sessão</span></div>
+            </button>
+          </div>
+        </div>
+        <button id="btn-join" class="btn-primary">Entrar na sessão</button>
+        <p id="login-error" class="error hidden"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEVELOPER -->
+  <div id="screen-developer" class="screen">
+    <header class="app-header">
+      <div class="header-left">
+        <span class="badge badge-dev">Dev</span>
+        <span id="developer-name" class="user-name"></span>
+        <span id="developer-squad-tag" class="squad-tag hidden"></span>
+      </div>
+      <div id="developer-story" class="story-name hidden"></div>
+      <button class="btn-logout" id="dev-logout">Sair</button>
+    </header>
+    <div class="screen-body">
+      <div id="dev-waiting" class="waiting-panel">
+        <div class="waiting-icon">⏳</div>
+        <p>Aguardando o Scrum Master iniciar uma rodada...</p>
+      </div>
+      <div id="dev-voting" class="hidden">
+        <div class="voting-header">
+          <p class="voting-hint">Selecione sua estimativa:</p>
+          <div id="dev-timer" class="round-timer hidden"></div>
+        </div>
+        <div class="fibonacci-cards" id="fibonacci-cards"></div>
+        <p id="dev-voted-msg" class="voted-msg hidden">✅ Voto registrado! Aguardando os demais...</p>
+      </div>
+      <div id="dev-reveal" class="hidden reveal-section">
+        <h2 class="section-title">Resultado da Rodada</h2>
+        <div id="dev-results-table"></div>
+      </div>
+      <div class="participants-panel">
+        <h3>Participantes</h3>
+        <div id="dev-participants"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QA -->
+  <div id="screen-qa" class="screen">
+    <header class="app-header">
+      <div class="header-left">
+        <span class="badge badge-qa">QA</span>
+        <span id="qa-name" class="user-name"></span>
+        <span id="qa-squad-tag" class="squad-tag hidden"></span>
+      </div>
+      <div id="qa-story" class="story-name hidden"></div>
+      <button class="btn-logout" id="qa-logout">Sair</button>
+    </header>
+    <div class="screen-body">
+      <div id="qa-waiting" class="waiting-panel">
+        <div class="waiting-icon">⏳</div>
+        <p>Aguardando o Scrum Master iniciar uma rodada...</p>
+      </div>
+      <div id="qa-voting" class="hidden">
+        <div class="voting-header">
+          <p class="voting-hint">Informe sua estimativa em horas:</p>
+          <div id="qa-timer" class="round-timer hidden"></div>
+        </div>
+        <div class="qa-input-group">
+          <input id="qa-hours-input" type="number" min="0.5" step="0.5" placeholder="Ex: 4" />
+          <span class="hours-label">horas</span>
+          <button id="btn-qa-vote" class="btn-qa">Confirmar</button>
+        </div>
+        <p id="qa-voted-msg" class="voted-msg hidden">✅ Estimativa registrada! Aguardando os demais...</p>
+      </div>
+      <div id="qa-reveal" class="hidden reveal-section">
+        <h2 class="section-title">Resultado da Rodada</h2>
+        <div id="qa-results-table"></div>
+      </div>
+      <div class="participants-panel">
+        <h3>Participantes</h3>
+        <div id="qa-participants"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OBSERVER -->
+  <div id="screen-observer" class="screen">
+    <header class="app-header">
+      <div class="header-left">
+        <span class="badge badge-observer">Observador</span>
+        <span id="observer-name" class="user-name"></span>
+      </div>
+      <div id="observer-story" class="story-name hidden"></div>
+      <button class="btn-logout" id="observer-logout">Sair</button>
+    </header>
+    <div class="screen-body">
+      <div id="observer-waiting" class="waiting-panel">
+        <div class="waiting-icon">👀</div>
+        <p>Aguardando o Scrum Master iniciar uma rodada...</p>
+      </div>
+      <div id="observer-voting" class="hidden">
+        <div class="voting-header">
+          <p class="voting-hint">Votação em andamento...</p>
+          <div id="observer-timer" class="round-timer hidden"></div>
+        </div>
+        <div id="observer-vote-status" class="vote-status-grid"></div>
+      </div>
+      <div id="observer-reveal" class="hidden reveal-section">
+        <h2 class="section-title">Resultado da Rodada</h2>
+        <div id="observer-results-table"></div>
+      </div>
+      <div class="participants-panel">
+        <h3>Participantes</h3>
+        <div id="observer-participants"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECH LEAD -->
+  <div id="screen-tech-lead" class="screen">
+    <header class="app-header">
+      <div class="header-left">
+        <span class="badge badge-tl">Tech Lead</span>
+        <span id="tech-lead-name" class="user-name"></span>
+        <span id="tech-lead-squad-tag" class="squad-tag hidden"></span>
+      </div>
+      <div id="tl-story" class="story-name hidden"></div>
+      <div class="header-actions">
+        <button class="btn-settings" id="btn-tl-toggle-history">📋 Histórico</button>
+        <button class="btn-logout" id="tl-logout">Sair</button>
+      </div>
+    </header>
+    <div class="screen-body">
+      <div id="tl-waiting" class="waiting-panel">
+        <div class="waiting-icon">⏳</div>
+        <p>Aguardando o Scrum Master iniciar uma rodada...</p>
+      </div>
+      <div id="tl-voting" class="hidden">
+        <div class="voting-header">
+          <p class="voting-hint">Selecione sua estimativa:</p>
+          <div id="tl-timer" class="round-timer hidden"></div>
+        </div>
+        <div class="fibonacci-cards" id="tl-fibonacci-cards"></div>
+        <p id="tl-voted-msg" class="voted-msg hidden">✅ Voto registrado! Aguardando os demais...</p>
+        <div id="tl-vote-status" class="vote-status-grid" style="margin-top:1.5rem"></div>
+      </div>
+      <div id="tl-reveal" class="hidden reveal-section">
+        <div class="results-header">
+          <h2 class="section-title">Resultado da Rodada</h2>
+          <button id="btn-tl-copy-result" class="btn-copy">📸 Copiar para Jira</button>
+        </div>
+        <div id="capture-area-tl">
+          <div class="results-split">
+            <div class="results-col col-dev">
+              <h3 class="col-title">💻 Desenvolvedores</h3>
+              <div id="tl-dev-results"></div>
+            </div>
+            <div class="results-col col-qa">
+              <h3 class="col-title">🔍 QA</h3>
+              <div id="tl-qa-results"></div>
+            </div>
+          </div>
+          <div id="tl-summary"></div>
+        </div>
+      </div>
+      <div id="tl-history-panel" class="hidden history-panel">
+        <div class="history-panel-header">
+          <h2 class="section-title">📋 Histórico de Rodadas</h2>
+          <button id="btn-tl-export-history" class="btn-export">📊 Exportar Excel</button>
+        </div>
+        <div class="history-filter">
+          <label class="filter-label">De:</label>
+          <input id="tl-filter-from" type="date" class="filter-date" />
+          <label class="filter-label">Até:</label>
+          <input id="tl-filter-to" type="date" class="filter-date" />
+          <button id="btn-tl-filter-history" class="btn-filter">Filtrar</button>
+          <button id="btn-tl-filter-clear" class="btn-filter-clear">✕ Limpar</button>
+        </div>
+        <div id="tl-history-entries" class="history-entries"></div>
+      </div>
+      <div class="participants-panel">
+        <h3>Participantes</h3>
+        <div id="tl-participants"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRUM MASTER -->
+  <div id="screen-master" class="screen">
+    <header class="app-header">
+      <div class="header-left">
+        <span class="badge badge-master">Scrum Master</span>
+        <span id="master-name" class="user-name"></span>
+      </div>
+      <div id="master-story-display" class="story-name hidden"></div>
+      <div class="header-actions">
+        <button class="btn-settings" id="btn-open-settings">⚙️ Configurações</button>
+        <button class="btn-settings" id="btn-toggle-history">📋 Histórico</button>
+        <button class="btn-logout" id="master-logout">Sair</button>
+      </div>
+    </header>
+    <div class="screen-body">
+      <div id="master-setup" class="card setup-card">
+        <h2>Nova Rodada</h2>
+        <div class="form-group">
+          <label>Nome da história / tarefa (opcional)</label>
+          <input id="master-story-input" type="text" placeholder="Ex: US-42 — Tela de login" maxlength="200" />
+        </div>
+        <button id="btn-start" class="btn-primary">▶ Iniciar Rodada</button>
+      </div>
+
+      <div id="master-active" class="hidden">
+        <div class="master-action-bar">
+          <button id="btn-reveal" class="btn-reveal" disabled>👁 Revelar Votos</button>
+          <button id="btn-reset" class="btn-danger">🔄 Nova Rodada</button>
+          <div id="master-timer" class="round-timer hidden"></div>
+        </div>
+        <div id="master-vote-status" class="vote-status-grid"></div>
+        <div id="master-results" class="hidden">
+          <div class="results-header">
+            <h2 class="section-title">Resultado</h2>
+            <button id="btn-copy-result" class="btn-copy">📸 Copiar para Jira</button>
+          </div>
+          <div id="capture-area">
+            <div class="results-split">
+              <div class="results-col col-dev">
+                <h3 class="col-title">💻 Desenvolvedores</h3>
+                <div id="master-dev-results"></div>
+              </div>
+              <div class="results-col col-qa">
+                <h3 class="col-title">🔍 QA</h3>
+                <div id="master-qa-results"></div>
+              </div>
+            </div>
+            <div id="master-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="master-history-panel" class="hidden history-panel">
+        <div class="history-panel-header">
+          <h2 class="section-title">📋 Histórico de Rodadas</h2>
+          <div class="history-header-actions">
+            <button id="btn-import-history" class="btn-import">📥 Importar Excel</button>
+            <button id="btn-export-history" class="btn-export">📊 Exportar Excel</button>
+            <button id="btn-clear-history" class="btn-danger">🗑 Limpar tudo</button>
+          </div>
+        </div>
+        <div class="history-filter">
+          <label class="filter-label">De:</label>
+          <input id="filter-from" type="date" class="filter-date" />
+          <label class="filter-label">Até:</label>
+          <input id="filter-to" type="date" class="filter-date" />
+          <button id="btn-filter-history" class="btn-filter">Filtrar</button>
+          <button id="btn-filter-clear" class="btn-filter-clear">✕ Limpar</button>
+        </div>
+        <div id="history-entries" class="history-entries"></div>
+      </div>
+
+      <div class="participants-panel">
+        <h3>Participantes na Sessão</h3>
+        <div id="master-participants"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <h2>⚙️ Configurações</h2>
+          <span id="modal-squad-badge" class="squad-tag hidden"></span>
+        </div>
+        <button class="modal-close" id="btn-close-settings">✕</button>
+      </div>
+      <div class="modal-tabs">
+        <button class="tab-btn active" data-tab="tab-cards">🃏 Cartas</button>
+        <button class="tab-btn" data-tab="tab-squads">👥 Squads</button>
+        <button class="tab-btn" data-tab="tab-users">👤 Participantes</button>
+        <button class="tab-btn" data-tab="tab-access">🔗 Acesso SM</button>
+      </div>
+      <div class="modal-body">
+        <div id="tab-cards" class="tab-content active-tab">
+          <p class="modal-hint">Ative/desative cartas e ajuste as horas correspondentes.</p>
+          <table class="settings-table">
+            <thead><tr><th>Carta</th><th>Horas</th><th>Ativo</th><th></th></tr></thead>
+            <tbody id="settings-rows"></tbody>
+          </table>
+          <div class="add-card-form">
+            <input id="new-card-value" type="text" placeholder="Valor (ex: 40)" maxlength="10" />
+            <input id="new-card-hours" type="text" placeholder="Horas (ex: 160h)" maxlength="15" />
+            <button id="btn-add-card" class="btn-add">+ Adicionar</button>
+          </div>
+        </div>
+        <div id="tab-squads" class="tab-content">
+          <p class="modal-hint">Registre os squads. Os colaboradores poderão selecionar o seu squad ao entrar.</p>
+          <div id="squads-list" class="squads-list"></div>
+          <div class="add-squad-form">
+            <input id="new-squad-name" type="text" placeholder="Nome do squad (ex: Squad Alpha)" maxlength="40" />
+            <button id="btn-add-squad" class="btn-add">+ Adicionar</button>
+          </div>
+        </div>
+        <div id="tab-users" class="tab-content">
+          <p class="modal-hint">Gerencie quem está na sessão. Clique em Remover para deslogar alguém.</p>
+          <div id="participants-manage"></div>
+        </div>
+        <div id="tab-access" class="tab-content">
+          <div class="access-card access-card-sm">
+            <div class="access-card-header">
+              <span class="access-icon">👑</span>
+              <div>
+                <strong>Seu link de Scrum Master</strong>
+                <p>Abre a sessão como SM em qualquer navegador ou dispositivo. Guarde este link!</p>
+              </div>
+            </div>
+            <div class="sm-link-box">
+              <input id="sm-link-input" type="text" readonly />
+              <button id="btn-copy-sm-link" class="btn-copy-sm">📋 Copiar</button>
+            </div>
+          </div>
+          <div class="access-card">
+            <div class="access-card-header">
+              <span class="access-icon">👥</span>
+              <div>
+                <strong>Link para participantes</strong>
+                <p>Compartilhe com Devs, QA e Observadores da sua sessão.</p>
+              </div>
+            </div>
+            <div class="sm-link-box">
+              <input id="public-link-input" type="text" readonly />
+              <button id="btn-copy-public-link" class="btn-copy-sm">📋 Copiar</button>
+            </div>
+          </div>
+          <div id="squad-links-section"></div>
+          <div class="access-card access-card-invite">
+            <div class="access-card-header">
+              <span class="access-icon">➕</span>
+              <div>
+                <strong>Convidar outro Scrum Master</strong>
+                <p>Cada SM tem sua própria sala isolada com squads e configurações independentes. Envie este link para o novo SM — ao abrir pela primeira vez, ele cria a sala dele automaticamente.</p>
+              </div>
+            </div>
+            <div class="sm-link-box">
+              <input id="sm-invite-input" type="text" readonly />
+              <button id="btn-copy-sm-invite" class="btn-copy-sm">📋 Copiar convite</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" id="settings-footer">
+        <button id="btn-cancel-settings" class="btn-outline">Cancelar</button>
+        <button id="btn-save-settings" class="btn-primary">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT STORY MODAL -->
+  <div id="edit-story-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="modal-header">
+        <h2>✏️ Editar História</h2>
+        <button class="modal-close" id="btn-close-edit-story">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: .82rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: .4rem;">Nome da história / tarefa</label>
+          <input id="edit-story-name" type="text" class="s-input" maxlength="200" placeholder="Ex: US-42 — Tela de login" />
+        </div>
+        <div>
+          <label style="font-size: .82rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: .4rem;">💬 Recado / Observação individual</label>
+          <textarea id="edit-story-note" class="s-input" rows="4" placeholder="Adicione um recado ou observação sobre esta história..." style="resize: vertical; font-family: inherit; line-height: 1.5;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-edit-story" class="btn-outline">Cancelar</button>
+        <button id="btn-save-edit-story" class="btn-primary">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="docs/app.js"></script>
+</body>
+</html>

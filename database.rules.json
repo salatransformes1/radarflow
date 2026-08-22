@@ -1,0 +1,77 @@
+{
+  "//": "Regras de segurança do Realtime Database — Estimativa Ágil.",
+  "//1": "Hoje o banco provavelmente está em modo aberto (read/write true). Estas",
+  "//2": "regras são compatíveis com o app ATUAL: não exigem login e não quebram",
+  "//3": "nenhuma tela. Elas fecham os buracos que dá para fechar sem refatorar.",
+  "//4": "O que elas NÃO resolvem (precisa da Fase 2 descrita em MELHORIAS.md):",
+  "//5": "esconder o voto alheio antes do reveal e impedir que qualquer pessoa",
+  "//6": "com o link vire Scrum Master.",
+  "//7": "Publicar com: firebase deploy --only database",
+
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "rooms": {
+      "$roomId": {
+        ".read": true,
+        ".write": false,
+
+        "settings": {
+          ".write": true,
+          ".validate": "newData.hasChildren()",
+          "cards":   { ".validate": "newData.hasChildren() || newData.val() == null" },
+          "hourMap": { ".validate": "newData.hasChildren() || newData.val() == null" },
+          "squads":  { ".validate": "newData.hasChildren() || newData.val() == null" },
+          "squadOverrides": {
+            "$squad": {
+              "cards":   { ".validate": "newData.hasChildren() || newData.val() == null" },
+              "hourMap": { ".validate": "newData.hasChildren() || newData.val() == null" }
+            }
+          }
+        },
+
+        "round": {
+          ".write": true,
+          "story":     { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "active":    { ".validate": "newData.isBoolean()" },
+          "revealed":  { ".validate": "newData.isBoolean()" },
+          "startedAt": { ".validate": "newData.isNumber()" },
+          "_historySaved": { ".validate": "newData.isBoolean()" },
+          "$other": { ".validate": false }
+        },
+
+        "participants": {
+          "$clientId": {
+            ".write": true,
+            "name":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30" },
+            "role":   { ".validate": "newData.val() == 'developer' || newData.val() == 'qa' || newData.val() == 'observer' || newData.val() == 'tech-lead' || newData.val() == 'master'" },
+            "squad":  { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 40)" },
+            "avatar": { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 8)" },
+            "vote":   { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 15)" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "kicked": {
+          "$clientId": { ".write": true, ".validate": "newData.isBoolean() || newData.val() == null" }
+        },
+
+        "history": {
+          ".write": true,
+          ".indexOn": ["_ts"],
+          "$entryId": {
+            "date":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "story":    { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "note":     { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 2000)" },
+            "devMode":  { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 15)" },
+            "devHours": { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 15)" },
+            "qaAvg":    { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 15)" },
+            "_ts":      { ".validate": "newData.isNumber()" },
+            "_deleted": { ".validate": "newData.isBoolean()" }
+          }
+        }
+      }
+    }
+  }
+}

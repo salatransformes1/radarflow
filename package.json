@@ -1,0 +1,22 @@
+{
+  "name": "scoring-app",
+  "version": "1.0.0",
+  "description": "Planning Poker para Desenvolvedores e QA",
+  "main": "legacy-socketio/server.js",
+  "scripts": {
+    "start": "node legacy-socketio/server.js",
+    "dev": "nodemon legacy-socketio/server.js",
+    "test:xss": "node test/xss-regression.test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "playwright": "^1.61.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
