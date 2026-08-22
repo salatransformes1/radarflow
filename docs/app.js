@@ -50,6 +50,7 @@ let _kickListenerRef = null;
 let _timerInterval = null;
 let _currentTimerId = null;
 let _pendingVoters = 0;
+let squadOverrideDirty = false; // true quando o SM já editou cartas do squad nesta abertura do modal, antes de salvar
 
 // ─── Configuração por squad ───────────────────────────────────────────────────
 // Chaves do Firebase não aceitam . # $ / [ ] — encodeURIComponent cobre tudo menos o '.'
@@ -939,6 +940,7 @@ function openSettings() {
   // Semeia com as cartas/horas efetivas do squad do SM (a lista de squads segue global)
   const eff = effectiveFor(mySquad);
   tempSettings = { cards: [...eff.cards], hourMap: { ...eff.hourMap }, squads: [...(currentSettings.squads || [])] };
+  squadOverrideDirty = false;
   applySquadScopeLabels();
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
   document.querySelector('.tab-btn[data-tab="tab-cards"]')?.classList.add('active');
@@ -969,7 +971,10 @@ function renderSettingsRows() {
     tbody.appendChild(tr);
   });
   tbody.querySelectorAll('.btn-del').forEach((btn) => {
-    btn.addEventListener('click', () => { const v = btn.closest('tr').dataset.cardVal; tempSettings.cards = tempSettings.cards.filter((c) => c !== v); delete tempSettings.hourMap[v]; renderSettingsRows(); });
+    btn.addEventListener('click', () => { const v = btn.closest('tr').dataset.cardVal; tempSettings.cards = tempSettings.cards.filter((c) => c !== v); delete tempSettings.hourMap[v]; markSquadOverrideDirty(); renderSettingsRows(); });
+  });
+  tbody.querySelectorAll('.a-toggle, .h-edit').forEach((input) => {
+    input.addEventListener(input.classList.contains('h-edit') ? 'input' : 'change', markSquadOverrideDirty);
   });
 }
 function addCardRow() {
@@ -977,7 +982,14 @@ function addCardRow() {
   const val = valIn.value.trim(); if (!val) return;
   if (!tempSettings.cards.includes(val)) tempSettings.cards.push(val);
   if (hIn.value.trim()) tempSettings.hourMap[val] = hIn.value.trim();
-  valIn.value = ''; hIn.value = ''; renderSettingsRows();
+  valIn.value = ''; hIn.value = ''; markSquadOverrideDirty(); renderSettingsRows();
+}
+// Marca que o SM já editou o baralho do squad ativo — a etiqueta de escopo
+// reage na hora, antes de "Salvar" gravar de fato o override.
+function markSquadOverrideDirty() {
+  if (!mySquad) return;
+  squadOverrideDirty = true;
+  applySquadScopeLabels();
 }
 
 // Seletor de escopo do SM: com o isolamento por squad, o SM precisa poder
@@ -1001,6 +1013,7 @@ document.getElementById('squad-scope-select')?.addEventListener('change', (e) =>
   // Reabastece a aba Cartas com o baralho do novo escopo
   const eff = effectiveFor(mySquad);
   if (tempSettings) { tempSettings.cards = [...eff.cards]; tempSettings.hourMap = { ...eff.hourMap }; }
+  squadOverrideDirty = false;
   applySquadScopeLabels();
   renderSettingsRows();
   // Reflete o novo escopo no que já estiver aberto
@@ -1010,7 +1023,7 @@ document.getElementById('squad-scope-select')?.addEventListener('change', (e) =>
   toast(mySquad ? `Atuando no squad ${mySquad}.` : 'Visão da sala inteira.');
 });
 
-// Badge do modal + texto de escopo da aba Cartas
+// Badge do modal + texto e etiqueta de escopo da aba Cartas
 function applySquadScopeLabels() {
   const squadBadge = document.getElementById('modal-squad-badge');
   if (squadBadge) {
@@ -1024,7 +1037,41 @@ function applySquadScopeLabels() {
       : 'Estas cartas valem para todos os squads sem configuração própria. ')
       + 'Ative/desative cartas e ajuste as horas correspondentes.';
   }
+  const deckBadge = document.getElementById('cards-scope-badge');
+  const revertBtn = document.getElementById('btn-revert-squad-cards');
+  const hasOwnOverride = !!(mySquad && currentSettings.squadOverrides && currentSettings.squadOverrides[squadKey(mySquad)]);
+  if (deckBadge) {
+    if (!mySquad) {
+      deckBadge.textContent = '🌐 Padrão da sala';
+      deckBadge.className = 'deck-badge';
+    } else if (hasOwnOverride || squadOverrideDirty) {
+      deckBadge.textContent = `🔀 Baralho próprio do Squad ${mySquad}`;
+      deckBadge.className = 'deck-badge badge-own';
+    } else {
+      deckBadge.textContent = `👁 Squad ${mySquad} está herdando o padrão da sala (ainda sem baralho próprio)`;
+      deckBadge.className = 'deck-badge';
+    }
+  }
+  if (revertBtn) revertBtn.classList.toggle('hidden', !hasOwnOverride);
 }
+
+// Remove o override do squad ativo e volta a herdar o padrão da sala.
+async function revertSquadCardsToDefault() {
+  if (!mySquad || !myRoomId) return;
+  if (!confirm(`Remover o baralho próprio do Squad ${mySquad} e voltar a usar o padrão da sala?`)) return;
+  await db.ref(`rooms/${myRoomId}/settings/squadOverrides/${squadKey(mySquad)}`).remove();
+  const overrides = { ...(currentSettings.squadOverrides || {}) };
+  delete overrides[squadKey(mySquad)];
+  currentSettings = { ...currentSettings, squadOverrides: overrides };
+  const eff = effectiveFor(mySquad);
+  tempSettings.cards = [...eff.cards];
+  tempSettings.hourMap = { ...eff.hourMap };
+  squadOverrideDirty = false;
+  applySquadScopeLabels();
+  renderSettingsRows();
+  toast(`Squad ${mySquad} voltou a herdar o padrão da sala.`);
+}
+document.getElementById('btn-revert-squad-cards')?.addEventListener('click', revertSquadCardsToDefault);
 
 function renderSquadsTab() {
   renderSquadScope();
