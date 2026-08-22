@@ -31,7 +31,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 /* ── Screens ─────────────────────────────────────────────────────────────── */
 .screen { display: none; }
 .screen.active { display: block; }
-#screen-login.active { display: flex; }
+#screen-login.active, #screen-sm-pending.active { display: flex; }
 
 .login-wrap {
   min-height: 100vh; width: 100%;
@@ -51,6 +51,11 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .form-group input:focus { border-color: var(--red); }
 .form-select { width: 100%; padding: .7rem 1rem; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 8px; color: var(--text); font-size: 1rem; outline: none; }
 .form-select:focus { border-color: var(--red); }
+
+.squad-picker { display: flex; gap: .5rem; flex-wrap: wrap; }
+.squad-btn { flex: 1; min-width: 6rem; padding: .6rem .5rem; border-radius: 8px; cursor: pointer; text-align: center; background: var(--surface2); border: 1.5px solid var(--border); color: var(--text); font-size: .84rem; font-weight: 700; transition: all .2s; }
+.squad-btn:hover { border-color: var(--muted); }
+.squad-btn[aria-pressed="true"] { border-color: var(--red); background: var(--red-bg); color: var(--red); }
 
 /* ── Role selector ───────────────────────────────────────────────────────── */
 .role-selector { display: flex; flex-direction: column; gap: .6rem; }
@@ -629,7 +634,18 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 }
 .squad-scope-box label {
   display: block; font-size: .75rem; font-weight: 800; color: var(--red);
-  text-transform: uppercase; letter-spacing: .05em; margin-bottom: .45rem;
+  text-transform: uppercase; letter-spacing: .05em; margin: .5rem 0 .45rem;
 }
-.squad-scope-box .form-select { font-size: .9rem; padding: .5rem .75rem; }
 .squad-scope-hint { font-size: .76rem; color: var(--muted); margin-top: .45rem; line-height: 1.45; }
+
+.reach-badge { display: inline-flex; align-items: center; gap: .4rem; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: .35rem .65rem; border-radius: 999px; }
+.reach-badge.local { background: var(--surface); color: var(--red); border: 1px solid rgba(204,9,47,.3); }
+.reach-badge.sync { background: var(--success-bg, rgba(21,128,61,.09)); color: var(--success); border: 1px solid rgba(21,128,61,.3); }
+
+.pending-item { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .55rem .8rem; margin-bottom: .5rem; }
+.pending-item .who { font-size: .86rem; font-weight: 700; }
+.pending-actions { display: flex; gap: .4rem; }
+.btn-approve { padding: .35rem .75rem; background: var(--success); color: #fff; border: none; border-radius: 6px; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.btn-approve:hover { opacity: .88; }
+.btn-deny { padding: .35rem .75rem; background: transparent; color: var(--muted); border: 1.5px solid var(--border); border-radius: 6px; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.btn-deny:hover { border-color: var(--danger); color: var(--danger); }

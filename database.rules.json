@@ -17,6 +17,22 @@
         ".read": true,
         ".write": false,
 
+        "owner": {
+          ".write": "!data.exists()",
+          ".validate": "newData.isString() && newData.val().length <= 60"
+        },
+        "approvedSmClients": {
+          "$clientId": { ".write": true, ".validate": "newData.isBoolean() || newData.val() == null" }
+        },
+        "pendingSm": {
+          "$clientId": {
+            ".write": true,
+            "name":        { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30" },
+            "requestedAt": { ".validate": "newData.isNumber()" },
+            "$other":      { ".validate": false }
+          }
+        },
+
         "settings": {
           ".write": true,
           ".validate": "newData.hasChildren()",

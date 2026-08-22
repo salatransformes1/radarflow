@@ -8,7 +8,8 @@ Resumo: **13 bugs corrigidos**, **isolamento por squad** (histórico, votos e re
 ação sua no console do Firebase, **novas regras de consenso** na apuração e uma
 revisão de layout (tema escuro, celular, acessibilidade).
 
-Os testes de regressão passaram de 5 para 14 casos (`npm run test:xss`).
+Os testes de regressão passaram de 5 para 17 casos (`npm run test:xss`) — os
+3 mais recentes cobrem o pedido de aprovação de Scrum Master (seção 5.1).
 
 ---
 
@@ -192,9 +193,12 @@ Quem **não tem squad** — o Scrum Master dono da sala — mantém a visão com
 
 ### Onde você troca de squad
 
-Configurações → **Squads** → *Você está atuando no squad*. Antes o SM só definia
-squad no login e não conseguia mais trocar sem sair e entrar de novo. O squad
-ativo aparece no cabeçalho, ao lado do seu nome.
+Configurações → **Squads** → *Você está atuando no squad*, agora como botões
+(era uma lista suspensa) com uma etiqueta deixando claro que essa troca é **só
+da sua tela** — ninguém mais é afetado. Antes o SM só definia squad no login e
+não conseguia mais trocar sem sair e entrar de novo. O squad ativo aparece no
+cabeçalho, ao lado do seu nome. O squad do login (para quem entra sem link com
+squad embutido) também virou botões, no lugar do menu suspenso.
 
 ### Nada some em silêncio
 
@@ -253,7 +257,7 @@ dia. Duas ressalvas que você precisa saber:
 Estes **não dá para corrigir só no código do site**, porque o navegador é o
 único guardião hoje. Vão em ordem de gravidade.
 
-### 5.1 Qualquer participante pode virar Scrum Master
+### 5.1 Qualquer participante pode virar Scrum Master — **parcialmente mitigado**
 
 O token é uma constante no código, igual para todas as salas:
 
@@ -262,22 +266,37 @@ const SM_TOKEN = 'SalaAgilidade-SM';
 ```
 
 Qualquer pessoa com o link de participante (`?r=sala`) pode acrescentar
-`&sm=SalaAgilidade-SM` e entrar como **Scrum Master da sua sala**: revelar votos
-na hora que quiser, remover pessoas, trocar o baralho e apagar o histórico
+`&sm=SalaAgilidade-SM` e tentar entrar como **Scrum Master da sua sala**: revelar
+votos na hora que quiser, remover pessoas, trocar o baralho e apagar o histórico
 inteiro. Não precisa de conhecimento técnico — o token aparece na URL que você
 mesma compartilha, inclusive na que você me mandou.
 
-Vale ainda mais porque a tela de "Convidar outro Scrum Master" distribui esse
-mesmo token.
+**O que mudou:** o link com o token não dá mais acesso instantâneo. O primeiro
+navegador a entrar como SM numa sala vira o **dono** (`rooms/$id/owner`, gravado
+uma única vez — a regra do Firebase recusa qualquer escrita depois que o campo
+já existe). Qualquer outro navegador que tente entrar como SM da mesma sala cai
+num pedido pendente (`rooms/$id/pendingSm/$clientId`) e vê uma tela de "aguardando
+aprovação" — só entra quando o dono aprova pela aba **Acesso SM → Pedidos de
+acesso a Scrum Master**. Isso fecha o caminho casual: quem só tinha o link
+(inclusive vindo da tela "Convidar outro Scrum Master", que também passa por
+esse pedido) não vira mais SM sem você clicar em "Liberar".
 
-**Correção real:** Firebase Authentication (Google/Microsoft da empresa) e um nó
-`rooms/$id/owner` com o UID do dono; as regras passam a exigir
-`auth.uid === owner` para escrever em `round`, `settings`, `kicked` e `history`.
+**O limite honesto disso:** é um gate de UX, não de servidor. As regras do
+Firebase continuam sem autenticação de verdade — `approvedSmClients/$clientId`
+aceita escrita de qualquer cliente, porque não existe hoje um jeito de a regra
+saber "este `set(true)` veio do botão Liberar do dono" versus "veio do console
+do DevTools de qualquer pessoa". Ou seja: alguém que abra o DevTools e escreva
+diretamente `rooms/$id/approvedSmClients/<algumId> = true` ainda vira SM sem
+aprovação — a mesma ressalva do item 3 (isolamento no cliente) e do item 5.2
+vale aqui. O que este pedido de aprovação resolve é o caso comum (link
+compartilhado, colega curioso, alguém que achou o link antigo); não resolve
+alguém tecnicamente motivado a entrar sem permissão.
 
-**Paliativo imediato**, se dá para viver com isso por enquanto: gere um token
-aleatório **por sala** em vez da constante única. Não é seguro de verdade (ainda
-é um segredo que trafega na URL), mas acaba com o "adivinhei o token da sala de
-todo mundo".
+**Correção real** (ainda de pé, é o que fecha o buraco de verdade): Firebase
+Authentication (Google/Microsoft da empresa); as regras passam a exigir
+`auth.uid === owner` para escrever em `round`, `settings`, `kicked` e
+`history` — só aí a regra deixa de aceitar escritas de quem não devia, mesmo
+pelo console.
 
 ### 5.2 Os votos são visíveis antes da revelação
 
@@ -355,7 +374,7 @@ npx playwright install --with-deps chromium
 npm run test:xss
 ```
 
-14 casos, rodando o `docs/app.js` real (sem cópia) num Chromium headless com o
+17 casos, rodando o `docs/app.js` real (sem cópia) num Chromium headless com o
 SDK do Firebase mockado — nenhuma chamada de rede, nenhum toque no projeto real.
 O mesmo comando roda no CI a cada PR.
 

@@ -43,6 +43,7 @@ let myAvatar = localStorage.getItem(AVATAR_KEY) || AVATARS[0];
 let currentSettings = { cards: [...DEFAULT_CARDS], hourMap: { ...DEFAULT_HOUR_MAP }, squads: [] };
 let tempSettings = null;
 let _latestParticipants = [];
+let _latestPendingSm = {};
 let _lastRevealedState = false;
 let _savingHistory = false; // guard anti-duplicata no mesmo client
 let _roomListenerRef = null;
@@ -372,11 +373,17 @@ window.addEventListener('load', async () => {
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 let selectedRole = 'developer';
+let selectedLoginSquad = '';
 document.querySelectorAll('.role-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.role-btn').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
     btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); selectedRole = btn.dataset.role;
   });
+});
+document.getElementById('squad-picker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.squad-btn'); if (!btn) return;
+  selectedLoginSquad = btn.dataset.squad;
+  document.querySelectorAll('#squad-picker .squad-btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.squad === selectedLoginSquad)));
 });
 document.getElementById('btn-join').addEventListener('click', doJoin);
 document.getElementById('input-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') doJoin(); });
@@ -407,39 +414,120 @@ async function doJoin() {
   if (selectedRole !== 'master' && !urlRoomId) { errEl.textContent = 'Use o link da sessão enviado pelo Scrum Master.'; errEl.classList.remove('hidden'); return; }
   if (selectedRole === 'master' && urlSmToken !== SM_TOKEN) { errEl.textContent = 'Token de Scrum Master inválido. Use o link correto.'; errEl.classList.remove('hidden'); return; }
 
-  const squadEl = document.getElementById('squad-select');
-
   if (selectedRole !== 'master') {
     const snap = await db.ref(`rooms/${urlRoomId}`).once('value');
     if (!snap.exists()) { errEl.textContent = 'Sala não encontrada. Peça o link correto ao Scrum Master.'; errEl.classList.remove('hidden'); return; }
 
-    // Squad tem que existir na sala: nem a URL nem o select podem inventar um
+    // Squad tem que existir na sala: nem a URL nem o picker podem inventar um
     const roomSquads = (snap.val() && snap.val().settings && snap.val().settings.squads) || [];
     const picked = (urlSquad && roomSquads.includes(urlSquad))
       ? urlSquad
-      : ((squadEl && squadEl.value && roomSquads.includes(squadEl.value)) ? squadEl.value : null);
+      : ((selectedLoginSquad && roomSquads.includes(selectedLoginSquad)) ? selectedLoginSquad : null);
     if (roomSquads.length && !picked) {
       errEl.textContent = urlSquad
         ? `O squad "${urlSquad}" não existe nesta sala. Selecione um squad válido.`
         : 'Selecione o seu squad para entrar.';
       errEl.classList.remove('hidden');
-      if (squadEl) document.getElementById('squad-group').style.display = '';
+      document.getElementById('squad-group').style.display = '';
       return;
     }
     mySquad = picked;
-  } else {
-    mySquad = (squadEl && squadEl.offsetParent !== null && squadEl.value) ? squadEl.value : null;
+    myName = name; myRole = selectedRole; myRoomId = urlRoomId;
+    errEl.classList.add('hidden');
+    saveSession();
+    showScreen(selectedRole);
+    await joinRoom(name, selectedRole, mySquad, myRoomId, urlSmToken);
+    return;
   }
 
-  myName   = name; myRole = selectedRole;
-  myRoomId = selectedRole === 'master' ? (urlRoomId || getOrCreateSmRoom()) : urlRoomId;
-  // When SM joins via a link that already carries the room ID, persist it locally
-  if (selectedRole === 'master' && urlRoomId) localStorage.setItem(SM_ROOM_KEY, urlRoomId);
+  // Scrum Master: quem já é dono da sala (ou já foi aprovado) entra direto;
+  // qualquer outro navegador pede acesso e espera aprovação do dono — fecha a
+  // brecha do token fixo (MELHORIAS.md item 5.1: link = qualquer um vira SM).
+  const squadGroupEl = document.getElementById('squad-group');
+  const squad = (squadGroupEl && squadGroupEl.offsetParent !== null && selectedLoginSquad) ? selectedLoginSquad : null;
+  const roomId = urlRoomId || getOrCreateSmRoom();
+  if (urlRoomId) localStorage.setItem(SM_ROOM_KEY, urlRoomId);
   errEl.classList.add('hidden');
-  saveSession();
-  showScreen(selectedRole);
-  await joinRoom(name, selectedRole, mySquad, myRoomId, urlSmToken);
+  await attemptMasterJoin(name, squad, roomId);
 }
+
+async function attemptMasterJoin(name, squad, roomId) {
+  const ownerSnap = await db.ref(`rooms/${roomId}/owner`).once('value');
+  const owner = ownerSnap.val();
+  if (!owner) {
+    // Ninguém reivindicou esta sala como Scrum Master ainda — este navegador vira o dono.
+    await db.ref(`rooms/${roomId}/owner`).set(clientId);
+    await db.ref(`rooms/${roomId}/approvedSmClients/${clientId}`).set(true);
+  } else if (owner !== clientId) {
+    const approvedSnap = await db.ref(`rooms/${roomId}/approvedSmClients/${clientId}`).once('value');
+    if (approvedSnap.val() !== true) {
+      await db.ref(`rooms/${roomId}/pendingSm/${clientId}`).set({ name, requestedAt: Date.now() });
+      showSmPendingScreen(roomId, name, squad);
+      return;
+    }
+  }
+  completeMasterLogin(name, squad, roomId);
+}
+
+function completeMasterLogin(name, squad, roomId) {
+  myName = name; myRole = 'master'; mySquad = squad; myRoomId = roomId;
+  saveSession();
+  showScreen('master');
+  joinRoom(name, 'master', squad, roomId, urlSmToken);
+}
+
+// ─── Pedido de acesso a SM pendente de aprovação ───────────────────────────────
+let _smApprovedListenerRef = null;
+let _smDenyListenerRef = null;
+let _pendingSmRoomId = null;
+
+function showSmPendingScreen(roomId, name, squad) {
+  _pendingSmRoomId = roomId;
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  document.getElementById('screen-sm-pending').classList.add('active');
+
+  if (_smApprovedListenerRef) _smApprovedListenerRef.off();
+  _smApprovedListenerRef = db.ref(`rooms/${roomId}/approvedSmClients/${clientId}`);
+  _smApprovedListenerRef.on('value', (snap) => {
+    if (snap.val() === true) {
+      stopSmPendingListeners();
+      db.ref(`rooms/${roomId}/pendingSm/${clientId}`).remove();
+      completeMasterLogin(name, squad, roomId);
+    }
+  });
+
+  // Se o pedido pendente sumir sem aprovação, o SM da sala recusou.
+  if (_smDenyListenerRef) _smDenyListenerRef.off();
+  _smDenyListenerRef = db.ref(`rooms/${roomId}/pendingSm/${clientId}`);
+  let sawPending = false;
+  _smDenyListenerRef.on('value', (snap) => {
+    if (snap.exists()) { sawPending = true; return; }
+    if (!sawPending) return;
+    db.ref(`rooms/${roomId}/approvedSmClients/${clientId}`).once('value').then((approvedSnap) => {
+      if (approvedSnap.val() === true) return; // aprovado — o outro listener cuida do login
+      stopSmPendingListeners();
+      document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+      document.getElementById('screen-login').classList.add('active');
+      const errEl = document.getElementById('login-error');
+      errEl.textContent = 'Seu pedido de acesso como Scrum Master foi recusado.';
+      errEl.classList.remove('hidden');
+    });
+  });
+}
+
+function stopSmPendingListeners() {
+  if (_smApprovedListenerRef) { _smApprovedListenerRef.off(); _smApprovedListenerRef = null; }
+  if (_smDenyListenerRef) { _smDenyListenerRef.off(); _smDenyListenerRef = null; }
+  _pendingSmRoomId = null;
+}
+
+document.getElementById('btn-cancel-sm-pending')?.addEventListener('click', async () => {
+  const roomId = _pendingSmRoomId;
+  stopSmPendingListeners();
+  if (roomId) await db.ref(`rooms/${roomId}/pendingSm/${clientId}`).remove();
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  document.getElementById('screen-login').classList.add('active');
+});
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 ['dev-logout', 'qa-logout', 'observer-logout', 'tl-logout', 'master-logout'].forEach((id) => {
@@ -509,6 +597,8 @@ function listenToRoom(roomId) {
     // Isolamento por squad: dentro de um squad, as telas mostram só o próprio time
     const visible = scopeToSquad(participants);
     _latestParticipants = visible;
+    _latestPendingSm = data.pendingSm || {};
+    if (myRole === 'master' && document.getElementById('tab-access')?.classList.contains('active-tab')) renderPendingSmRequests();
 
     // Rehidrata o voto local a partir do Firebase (F5 no meio da rodada)
     const myStoredVote = rawParts[clientId] ? (rawParts[clientId].vote ?? null) : null;
@@ -931,7 +1021,7 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
     const footer = document.getElementById('settings-footer');
     if (tabId === 'tab-access' || tabId === 'tab-users') footer?.classList.add('hidden');
     else footer?.classList.remove('hidden');
-    if (tabId === 'tab-access') renderSmAccessTab();
+    if (tabId === 'tab-access') { renderSmAccessTab(); renderPendingSmRequests(); }
     if (tabId === 'tab-users') renderParticipantsManage();
   });
 });
@@ -996,20 +1086,22 @@ function markSquadOverrideDirty() {
 // dizer em qual squad está atuando sem ter que sair e entrar de novo.
 function renderSquadScope() {
   const box = document.getElementById('squad-scope-box');
-  const sel = document.getElementById('squad-scope-select');
-  if (!box || !sel) return;
+  const picker = document.getElementById('squad-scope-picker');
+  if (!box || !picker) return;
   const squads = (tempSettings && tempSettings.squads) || currentSettings.squads || [];
   if (myRole !== 'master' || !squads.length) { box.classList.add('hidden'); return; }
   box.classList.remove('hidden');
-  sel.innerHTML = '<option value="">Todos os squads (visão da sala)</option>'
-    + squads.map((sq) => `<option value="${escHtml(sq)}"${sq === mySquad ? ' selected' : ''}>${escHtml(sq)}</option>`).join('');
+  picker.innerHTML = '<button type="button" class="squad-btn" data-scope="" aria-pressed="' + (!mySquad) + '">Toda a sala</button>'
+    + squads.map((sq) => `<button type="button" class="squad-btn" data-scope="${escHtml(sq)}" aria-pressed="${sq === mySquad}">${escHtml(sq)}</button>`).join('');
 }
 
-document.getElementById('squad-scope-select')?.addEventListener('change', (e) => {
+document.getElementById('squad-scope-picker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.squad-btn'); if (!btn) return;
   const squads = (tempSettings && tempSettings.squads) || currentSettings.squads || [];
-  const next = squads.includes(e.target.value) ? e.target.value : null;
+  const next = squads.includes(btn.dataset.scope) ? btn.dataset.scope : null;
   mySquad = next;
   saveSession();
+  renderSquadScope();
   // Reabastece a aba Cartas com o baralho do novo escopo
   const eff = effectiveFor(mySquad);
   if (tempSettings) { tempSettings.cards = [...eff.cards]; tempSettings.hourMap = { ...eff.hourMap }; }
@@ -1117,6 +1209,38 @@ function renderParticipantsManage() {
   });
   el.appendChild(list);
 }
+
+function renderPendingSmRequests() {
+  const list = document.getElementById('pending-sm-list');
+  const empty = document.getElementById('pending-sm-empty');
+  if (!list || !empty) return;
+  const entries = Object.entries(_latestPendingSm || {});
+  if (!entries.length) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  list.innerHTML = entries.map(([reqClientId, r]) => `
+    <div class="pending-item">
+      <span class="who">👤 ${escHtml(r.name)}</span>
+      <div class="pending-actions">
+        <button type="button" class="btn-approve" data-approve="${escHtml(reqClientId)}">✅ Liberar</button>
+        <button type="button" class="btn-deny" data-deny="${escHtml(reqClientId)}">✖ Recusar</button>
+      </div>
+    </div>`).join('');
+}
+document.getElementById('pending-sm-list')?.addEventListener('click', async (e) => {
+  const approveBtn = e.target.closest('[data-approve]');
+  const denyBtn = e.target.closest('[data-deny]');
+  if (approveBtn) {
+    const reqId = approveBtn.dataset.approve;
+    await db.ref().update({
+      [`rooms/${myRoomId}/approvedSmClients/${reqId}`]: true,
+      [`rooms/${myRoomId}/pendingSm/${reqId}`]: null,
+    });
+    toast('Acesso de Scrum Master liberado.');
+  } else if (denyBtn) {
+    await db.ref(`rooms/${myRoomId}/pendingSm/${denyBtn.dataset.deny}`).remove();
+    toast('Pedido recusado.');
+  }
+});
 
 function renderSmAccessTab() {
   const base = window.location.origin + window.location.pathname;
@@ -1231,21 +1355,21 @@ async function saveSettings() {
 
 // ─── Squad selector ───────────────────────────────────────────────────────────
 function updateSquadSelector() {
-  const group = document.getElementById('squad-group'); const sel = document.getElementById('squad-select');
-  if (!group || !sel) return;
+  const group = document.getElementById('squad-group'); const picker = document.getElementById('squad-picker');
+  if (!group || !picker) return;
   const squads = currentSettings.squads || [];
   if (squads.length > 0) {
     // Keep cache up-to-date so the next F5 shows squads instantly
     if (myRoomId) try { localStorage.setItem(`pp_sqc_${myRoomId}`, JSON.stringify(squads)); } catch {}
-    sel.innerHTML = '<option value="">— Selecione seu squad —</option>';
-    squads.forEach((sq) => { const o = document.createElement('option'); o.value = sq; o.textContent = sq; sel.appendChild(o); });
     if (urlSquad && squads.includes(urlSquad)) {
-      sel.value = urlSquad;
+      selectedLoginSquad = urlSquad;
       group.style.display = 'none';
     } else {
+      if (!squads.includes(selectedLoginSquad)) selectedLoginSquad = '';
       group.style.display = '';
     }
-  } else { group.style.display = 'none'; }
+    picker.innerHTML = squads.map((sq) => `<button type="button" class="squad-btn" data-squad="${escHtml(sq)}" aria-pressed="${sq === selectedLoginSquad}">${escHtml(sq)}</button>`).join('');
+  } else { group.style.display = 'none'; selectedLoginSquad = ''; }
 }
 
 // ─── Round timer ──────────────────────────────────────────────────────────────
